@@ -1,0 +1,11 @@
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
+
+# macOS
+.DS_Store
+
+# Local scratch (files parked for manual deletion)
+_to_delete/
