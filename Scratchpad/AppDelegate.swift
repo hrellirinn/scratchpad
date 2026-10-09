@@ -178,7 +178,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func hidePanel() {
+    /// - Parameter stayActive: `true` when one of our own windows is about to
+    ///   open (Settings, an alert). Hiding the whole app at that moment would
+    ///   put the new window behind everything else.
+    private func hidePanel(stayActive: Bool = false) {
         store.saveAll()          // don't leave unsaved keystrokes waiting on the timer
         panel.orderOut(nil)
         statusItem.button?.highlight(false)
@@ -187,9 +190,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastHiddenAt = Date()
 
         // Hand focus back to whatever app you were in — unless one of our own
-        // windows (Settings) is open, in which case stay active for it.
+        // windows (Settings) is open or about to open, in which case stay active.
         let hasOtherVisibleWindows = NSApp.windows.contains { $0 !== panel && $0.isVisible }
-        if !hasOtherVisibleWindows {
+        if !hasOtherVisibleWindows && !stayActive {
             NSApp.hide(nil)
         }
     }
@@ -202,14 +205,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// first so it doesn't float over the Settings window (the panel sits above
     /// normal windows), and make sure the app is active so the window shows.
     func prepareForSettings() {
-        hidePanel()
+        hidePanel(stayActive: true)
         NSApp.activate()
+        frontSettingsWindowWhenItAppears()
+    }
+
+    /// SwiftUI creates the Settings window *after* `openSettings()` returns, so
+    /// we can't bring it forward right away. Look for it on the next few passes
+    /// through the run loop and order it to the front once it exists.
+    private func frontSettingsWindowWhenItAppears(attempt: Int = 0) {
+        let settingsWindow = NSApp.windows.first { $0 !== panel && $0.isVisible && !($0 is NSPanel) }
+        if let settingsWindow {
+            settingsWindow.orderFrontRegardless()   // works even if we're not the active app
+            settingsWindow.makeKey()
+        } else if attempt < 10 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.frontSettingsWindowWhenItAppears(attempt: attempt + 1)
+            }
+        }
     }
 
     /// The gear menu's "Check for Updates…". Same dance as Settings: close the
     /// panel so the alert isn't hidden behind it, and make sure we're active.
     func checkForUpdates() {
-        hidePanel()
+        hidePanel(stayActive: true)
         NSApp.activate()
         Task { await updates.checkAndReport() }
     }

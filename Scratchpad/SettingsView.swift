@@ -30,13 +30,18 @@ private struct GeneralSettingsTab: View {
             }
             .padding(.bottom, 12)
 
-            Picker("Number of sheets:", selection: $settings.sheetCount) {
-                ForEach(1...AppSettings.maxSheets, id: \.self) { count in
-                    Text("\(count)").tag(count)
+            // The 220pt width must apply to the segments only. On the Picker
+            // itself it squeezed the label into the same box, wrapping it.
+            LabeledContent("Number of sheets:") {
+                Picker("", selection: $settings.sheetCount) {
+                    ForEach(1...AppSettings.maxSheets, id: \.self) { count in
+                        Text("\(count)").tag(count)
+                    }
                 }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 220)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 220)
 
             Text("With one sheet the tab strip is hidden. Hidden sheets keep their text.")
                 .font(.callout)
@@ -224,6 +229,9 @@ private struct AboutTab: View {
                 .font(.callout)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 400)
+                // Inside a TabView, SwiftUI offers the text one line of height and
+                // truncates with "…". This says "take whatever height you need".
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 8)
             Text(copyright)
                 .font(.caption)
