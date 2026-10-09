@@ -30,6 +30,12 @@ final class EditorController {
         listKind = state.list
     }
 
+    /// Hand the keyboard back to the text view (after renaming a tab, say).
+    func focusEditor() {
+        guard let textView else { return }
+        textView.window?.makeFirstResponder(textView)
+    }
+
     func toggleBold()          { perform { $0.toggleTrait(.bold) } }
     func toggleItalic()        { perform { $0.toggleTrait(.italic) } }
     func toggleUnderline()     { perform { $0.toggleStyle(.underlineStyle) } }

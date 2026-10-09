@@ -61,7 +61,11 @@ struct PopoverView: View {
             selectedIndex: Binding(
                 get: { store.selectedIndex },
                 set: { store.selectedIndex = $0 }
-            )
+            ),
+            onRename: { index, name in
+                if let name { store.rename(index, to: name) }
+                editorController.focusEditor()
+            }
         )
         .frame(maxWidth: .infinity)
     }

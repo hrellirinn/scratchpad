@@ -11,15 +11,26 @@ import SwiftUI
 ///   - track            : 12% capsule (white on dark, black on light)
 ///   - selected segment : raised pill, label at 100%
 ///   - other segments   : label at 60%, hairline separators between them
+///
+/// Double-click a tab (or right-click ▸ Rename…) to rename it in place.
+/// Return keeps the new name, Esc cancels.
 struct SheetSelector: View {
 
     var titles: [String]
     @Binding var selectedIndex: Int
+    /// Called when a rename ends, with the new name or `nil` if it was
+    /// cancelled. Leave it out and the tabs can't be renamed.
+    var onRename: ((_ index: Int, _ name: String?) -> Void)? = nil
 
     /// Lets the selection pill animate from one segment to the next instead of
     /// jumping — `matchedGeometryEffect` moves a view between positions.
     @Namespace private var selection
     @Environment(\.colorScheme) private var colorScheme
+
+    /// The tab being renamed, and the name typed so far.
+    @State private var editingIndex: Int?
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
 
     private enum Metrics {
         static let height: CGFloat = 28
@@ -50,6 +61,7 @@ struct SheetSelector: View {
                 .font(.system(size: Metrics.fontSize))
                 .foregroundStyle(.primary.opacity(isSelected ? 1 : 0.6))
                 .lineLimit(1)
+                .opacity(editingIndex == index ? 0 : 1)      // the rename field sits on top
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background {
                     if isSelected {
@@ -74,6 +86,50 @@ struct SheetSelector: View {
                 .contentShape(Capsule())   // whole segment is clickable, not just the text
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded { beginRename(index) })
+        .contextMenu {
+            if onRename != nil {
+                Button("Rename…") { beginRename(index) }
+            }
+        }
+        .help(titles[index])          // full name, if the tab cuts it short
+        .overlay {
+            // Outside the Button, so clicks reach the field instead of the tab.
+            if editingIndex == index {
+                renameField
+            }
+        }
+    }
+
+    // MARK: Renaming
+
+    private var renameField: some View {
+        TextField("", text: $draft)
+            .textFieldStyle(.plain)
+            .font(.system(size: Metrics.fontSize))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 8)
+            .focused($fieldFocused)
+            .onAppear { fieldFocused = true }
+            .onSubmit { endRename(keep: true) }
+            .onExitCommand { endRename(keep: false) }
+            // Clicking elsewhere keeps what was typed, like Finder.
+            .onChange(of: fieldFocused) { _, focused in
+                if !focused { endRename(keep: true) }
+            }
+    }
+
+    private func beginRename(_ index: Int) {
+        guard onRename != nil else { return }
+        selectedIndex = index
+        draft = titles[index]
+        editingIndex = index
+    }
+
+    private func endRename(keep: Bool) {
+        guard let index = editingIndex else { return }
+        editingIndex = nil
+        onRename?(index, keep ? draft : nil)
     }
 }
 

@@ -9,6 +9,8 @@ enum SheetFormat: String {
 
 /// Everything about a sheet except its text.
 struct SheetInfo: Equatable {
+    /// What the tab says. `nil` shows the default "Sheet N".
+    var name: String?
     var format: SheetFormat = .plain
     /// Syntax colouring for plain sheets (decoration only; files stay plain).
     var language: SyntaxLanguage = .plain
@@ -19,12 +21,15 @@ extension SheetInfo {
     /// (say, a language that was removed) falls back to its default instead
     /// of failing the whole list.
     init(plist: [String: String]) {
+        name = plist["name"]
         format = plist["format"].flatMap(SheetFormat.init(rawValue:)) ?? .plain
         language = plist["language"].flatMap(SyntaxLanguage.init(rawValue:)) ?? .plain
     }
 
     var plist: [String: String] {
-        ["format": format.rawValue, "language": language.rawValue]
+        var plist = ["format": format.rawValue, "language": language.rawValue]
+        plist["name"] = name
+        return plist
     }
 }
 
@@ -41,7 +46,7 @@ final class SheetStore {
     private(set) var texts: [String]
     /// Rich-text content per sheet (used when `sheets[i].format == .rich`).
     private(set) var richTexts: [NSAttributedString]
-    /// Format and syntax colouring per sheet.
+    /// Name, format and syntax colouring per sheet.
     private(set) var sheets: [SheetInfo] {
         didSet { UserDefaults.standard.set(sheets.map(\.plist), forKey: Keys.sheets) }
     }
@@ -126,7 +131,14 @@ final class SheetStore {
     // MARK: - Naming
 
     func title(for index: Int) -> String {
-        "Sheet \(index + 1)"
+        sheets[index].name ?? "Sheet \(index + 1)"
+    }
+
+    /// Only the tab label changes; the file stays "Sheet N.txt". A blank name
+    /// goes back to the default.
+    func rename(_ index: Int, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        sheets[index].name = trimmed.isEmpty ? nil : trimmed
     }
 
     static func fileURL(in directory: URL, index: Int, format: SheetFormat) -> URL {
