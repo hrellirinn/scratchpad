@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 
 /// The Settings window (⌘,). Laid out after CotEditor's preferences:
@@ -18,8 +19,17 @@ struct SettingsView: View {
 private struct GeneralSettingsTab: View {
     @Bindable private var settings = AppSettings.shared
 
+    /// Asked of the system rather than stored, because it can also be
+    /// switched off in System Settings ▸ General ▸ Login Items.
+    @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
+
     var body: some View {
         Form {
+            LabeledContent("Startup:") {
+                Toggle("Open Scratchpad at login", isOn: $opensAtLogin)
+            }
+            .padding(.bottom, 12)
+
             Picker("Number of sheets:", selection: $settings.sheetCount) {
                 ForEach(1...AppSettings.maxSheets, id: \.self) { count in
                     Text("\(count)").tag(count)
@@ -42,6 +52,24 @@ private struct GeneralSettingsTab: View {
                 .foregroundStyle(.secondary)
         }
         .padding(24)
+        .onChange(of: opensAtLogin) { _, on in setOpensAtLogin(on) }
+        .onAppear { opensAtLogin = SMAppService.mainApp.status == .enabled }
+    }
+
+    private func setOpensAtLogin(_ on: Bool) {
+        let service = SMAppService.mainApp
+        guard on != (service.status == .enabled) else { return }
+        do {
+            try on ? service.register() : service.unregister()
+            // Switched off by hand in System Settings earlier: only the user
+            // can turn it back on there, so take them to it.
+            if service.status == .requiresApproval {
+                SMAppService.openSystemSettingsLoginItems()
+            }
+        } catch {
+            print("[Scratchpad] couldn't change login item: \(error)")
+            opensAtLogin = service.status == .enabled
+        }
     }
 }
 
