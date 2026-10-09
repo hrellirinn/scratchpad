@@ -25,6 +25,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// itself is clicked while the panel is open (see `togglePanel`).
     private var lastHiddenAt: Date = .distantPast
 
+    /// The Settings ▸ General shortcut that opens the panel from any app.
+    private var panelHotKey: GlobalHotKey?
+    /// True while Settings is recording a new shortcut (see `ShortcutRecorder`).
+    private var panelShortcutPaused = false
+
     /// Design values. 440×580 from the Figma frame; gap is the breathing room
     /// between the menubar and the panel, matching macOS 26 system panels.
     static let panelSize = NSSize(width: 440, height: 580)
@@ -51,6 +56,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.observeAppearanceSetting()
             }
         }
+    }
+
+    /// Register Settings ▸ General's shortcut, and re-register when it changes.
+    /// Same one-shot observation trick as `observeAppearanceSetting`.
+    private func observePanelShortcut() {
+        withObservationTracking { [weak self] in
+            self?.registerPanelShortcut()
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                self?.observePanelShortcut()
+            }
+        }
+    }
+
+    private func registerPanelShortcut() {
+        let shortcut = settings.panelShortcut     // read first: this is what's observed
+        panelHotKey = nil
+        guard let shortcut, !panelShortcutPaused else { return }
+        panelHotKey = GlobalHotKey(shortcut) { [weak self] in
+            self?.togglePanel(nil)
+        }
+    }
+
+    func setPanelShortcutPaused(_ paused: Bool) {
+        panelShortcutPaused = paused
+        registerPanelShortcut()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -92,6 +123,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(appDidResignActive),
             name: NSApplication.didResignActiveNotification, object: nil
         )
+
+        observePanelShortcut()
     }
 
     @objc private func togglePanel(_ sender: Any?) {

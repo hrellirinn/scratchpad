@@ -31,6 +31,15 @@ private struct GeneralSettingsTab: View {
             Text("With one sheet the tab strip is hidden. Hidden sheets keep their text.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+
+            LabeledContent("Open Scratchpad:") {
+                ShortcutRecorder(shortcut: $settings.panelShortcut)
+            }
+            .padding(.top, 12)
+
+            Text("Works from any app. Press it again to close the panel.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
         .padding(24)
     }
