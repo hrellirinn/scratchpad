@@ -207,12 +207,11 @@ private struct AboutTab: View {
     private var copyright: String { info["NSHumanReadableCopyright"] as? String ?? "" }
 
     private let blurb = """
-    Scratchpad is a one-person project by Elías R. Ragnarsson — a designer in \
-    Reykjavík who spends his days on design systems, tokens and the tooling that \
-    holds them together, and his evenings somewhere between a guitar, a 3D printer \
-    and a stack of science fiction. It started as a way to keep a few notes within \
-    reach of the menubar, and as an exercise in treating a small personal tool like \
-    a real product.
+    Scratchpad is a small little app by Elías R. Ragnarsson, an Iceland based \
+    designer. It was created to solve a very specific personal need, having a \
+    light weight text editor accessible anywhere anytime. Fully vibe coded, \
+    thanks Claude, and used as an exercise in native app building for fun. \
+    If you're here, reading this, thanks for using it... I hope you like it.
     """
 
     var body: some View {
