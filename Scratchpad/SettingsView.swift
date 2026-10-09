@@ -209,8 +209,8 @@ private struct AboutTab: View {
     private let blurb = """
     Scratchpad is a small little app by Elías R. Ragnarsson, an Iceland based \
     designer. It was created to solve a very specific personal need, having a \
-    light weight text editor accessible anywhere anytime. Fully vibe coded, \
-    thanks Claude, and used as an exercise in native app building for fun. \
+    lightweight text editor accessible anywhere anytime. Fully vibe coded with \
+    my good buddy Claude, and used as an exercise in native app building for fun. \
     If you're here, reading this, thanks for using it... I hope you like it.
     """
 
