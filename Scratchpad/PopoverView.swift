@@ -15,6 +15,7 @@ struct PopoverView: View {
     /// `store.texts` / `store.selectedIndex` here subscribes this view to changes.
     var store: SheetStore
     var settings: AppSettings
+    var updates: UpdateChecker
 
     /// Light or dark, as the *panel* currently is (the window's appearance, which
     /// Settings ▸ Appearance controls). Drives the editor palette.
@@ -214,6 +215,17 @@ struct PopoverView: View {
         HStack {
             Spacer()
             Menu {
+                Text("Scratchpad \(updates.currentVersion)")
+                if let release = updates.available {
+                    Button("Download Scratchpad \(release.version)…") {
+                        NSWorkspace.shared.open(release.url)
+                    }
+                } else {
+                    Button("Check for Updates…") {
+                        (NSApp.delegate as? AppDelegate)?.checkForUpdates()
+                    }
+                }
+                Divider()
                 Button("Settings…") {
                     (NSApp.delegate as? AppDelegate)?.prepareForSettings()
                     openSettings()
@@ -224,6 +236,15 @@ struct PopoverView: View {
                 }
             } label: {
                 Image(systemName: "gear")
+                    // A dot on the gear when there's an update waiting.
+                    .overlay(alignment: .topTrailing) {
+                        if updates.available != nil {
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 2, y: -2)
+                        }
+                    }
             }
             .menuStyle(.button)
             .buttonStyle(.borderless)
@@ -235,5 +256,5 @@ struct PopoverView: View {
 }
 
 #Preview {
-    PopoverView(store: SheetStore(), settings: AppSettings.shared)
+    PopoverView(store: SheetStore(), settings: AppSettings.shared, updates: UpdateChecker())
 }

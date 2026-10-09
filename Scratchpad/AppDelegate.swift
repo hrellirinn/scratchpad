@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The model. Created once here and handed to the view; lives as long as the app.
     private let store = SheetStore()
     private let settings = AppSettings.shared
+    private let updates = UpdateChecker()
 
     /// Watches for clicks in *other* apps so we can dismiss, like Control Center.
     private var clickOutsideMonitor: Any?
@@ -40,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureStatusItem()
         configurePanel()
         observeAppearanceSetting()
+        updates.startChecking()
     }
 
     /// Apply Settings ▸ Appearance to the panel, and re-apply whenever it changes.
@@ -113,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func configurePanel() {
         panel = FloatingPanel(size: Self.panelSize,
                               cornerRadius: Self.panelCornerRadius,
-                              content: PopoverView(store: store, settings: settings))
+                              content: PopoverView(store: store, settings: settings, updates: updates))
         panel.onEscape = { [weak self] in self?.hidePanel() }
 
         // If you switch to another app (⌘-tab, clicking its Dock icon), dismiss.
@@ -202,6 +204,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func prepareForSettings() {
         hidePanel()
         NSApp.activate()
+    }
+
+    /// The gear menu's "Check for Updates…". Same dance as Settings: close the
+    /// panel so the alert isn't hidden behind it, and make sure we're active.
+    func checkForUpdates() {
+        hidePanel()
+        NSApp.activate()
+        Task { await updates.checkAndReport() }
     }
 
     /// Put the text cursor in the editor as soon as the panel opens, so you
