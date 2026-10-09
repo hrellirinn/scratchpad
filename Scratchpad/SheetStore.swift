@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import os
 
 /// Whether a sheet is plain text (Monaco, line numbers, `.txt`) or rich text
 /// (system font, formatting toolbar, `.rtf`). Chosen per sheet with the switch.
@@ -199,7 +200,7 @@ final class SheetStore {
                 try data.write(to: url, options: .atomic)
             }
         } catch {
-            print("[Scratchpad] failed to save \(url.lastPathComponent): \(error)")
+            Log.storage.error("failed to save \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
