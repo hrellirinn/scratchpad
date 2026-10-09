@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Watches clicks in *our* window that land in the transparent shadow margin.
     private var marginClickMonitor: Any?
 
+    /// The Settings ▸ General shortcut that opens the panel from any app.
+    private var panelHotKey: GlobalHotKey?
+    /// True while Settings is recording a new shortcut (see `ShortcutRecorder`).
+    private var panelShortcutPaused = false
+
     /// Guards against the "close then instantly reopen" race when the icon
     /// itself is clicked while the panel is open (see `togglePanel`).
     private var lastHiddenAt: Date = .distantPast
@@ -32,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureStatusItem()
         configurePanel()
         observeAppearanceSetting()
+        observePanelShortcut()
     }
 
     /// Apply Settings ▸ Appearance to the panel, and re-apply whenever it changes.
@@ -48,6 +54,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.observeAppearanceSetting()
             }
         }
+    }
+
+    /// Register Settings ▸ General's shortcut, and re-register when it changes.
+    /// Same one-shot observation trick as `observeAppearanceSetting`.
+    private func observePanelShortcut() {
+        withObservationTracking { [weak self] in
+            self?.registerPanelShortcut()
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                self?.observePanelShortcut()
+            }
+        }
+    }
+
+    private func registerPanelShortcut() {
+        let shortcut = settings.panelShortcut     // read first: this is what's observed
+        panelHotKey = nil
+        guard let shortcut, !panelShortcutPaused else { return }
+        panelHotKey = GlobalHotKey(shortcut) { [weak self] in
+            self?.togglePanel(nil)
+        }
+    }
+
+    func setPanelShortcutPaused(_ paused: Bool) {
+        panelShortcutPaused = paused
+        registerPanelShortcut()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -45,6 +45,10 @@ final class AppSettings {
     var appearanceMode: AppearanceMode { didSet { defaults.set(appearanceMode.rawValue, forKey: Keys.appearanceMode) } }
     var keepEditorDark: Bool      { didSet { defaults.set(keepEditorDark, forKey: Keys.keepEditorDark) } }
     var editorOpacity: Double     { didSet { defaults.set(editorOpacity, forKey: Keys.editorOpacity) } }
+    /// System-wide shortcut that opens the panel. `nil` (the default) means none.
+    var panelShortcut: KeyShortcut? {
+        didSet { defaults.set(panelShortcut.flatMap { try? JSONEncoder().encode($0) }, forKey: Keys.panelShortcut) }
+    }
 
     private let defaults = UserDefaults.standard
 
@@ -56,6 +60,7 @@ final class AppSettings {
         static let appearanceMode = "appearanceMode"
         static let keepEditorDark = "keepEditorDark"
         static let editorOpacity  = "editorOpacity"
+        static let panelShortcut  = "panelShortcut"
     }
 
     private init() {
@@ -78,6 +83,8 @@ final class AppSettings {
         appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearanceMode) ?? "") ?? .dark
         keepEditorDark = defaults.bool(forKey: Keys.keepEditorDark)
         editorOpacity  = defaults.double(forKey: Keys.editorOpacity)
+        panelShortcut  = defaults.data(forKey: Keys.panelShortcut)
+            .flatMap { try? JSONDecoder().decode(KeyShortcut.self, from: $0) }
     }
 }
 
