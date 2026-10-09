@@ -1,0 +1,54 @@
+# Push a tag like v0.2.0 and this builds Scratchpad and attaches it to a
+# GitHub release. The tag must match the version in Xcode (target ▸ General ▸
+# Version), so bump that, commit, then tag.
+#
+# The app is ad-hoc signed (no Apple Developer account), so macOS will ask
+# before opening a downloaded copy. See the release notes below.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write          # create the release and upload the zip
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, for the build number
+
+      - name: Check the tag matches the app version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          APP_VERSION=$(xcodebuild -project Scratchpad.xcodeproj -scheme Scratchpad \
+            -configuration Release -showBuildSettings | awk '/ MARKETING_VERSION / { print $3 }')
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "::error::Tag is $GITHUB_REF_NAME but the app version is $APP_VERSION. Bump it in Xcode first."
+            exit 1
+          fi
+          echo "VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          xcodebuild -project Scratchpad.xcodeproj -scheme Scratchpad -configuration Release \
+            -derivedDataPath build \
+            CURRENT_PROJECT_VERSION=$(git rev-list --count HEAD) \
+            build
+
+      - name: Zip
+        run: |
+          ditto -c -k --keepParent build/Build/Products/Release/Scratchpad.app "Scratchpad-$VERSION.zip"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "Scratchpad-$VERSION.zip" \
+            --title "Scratchpad $VERSION" \
+            --generate-notes \
+            --notes "Unzip and drag Scratchpad to Applications. First launch: macOS says it can't verify the app. Open System Settings ▸ Privacy & Security and click Open Anyway."
