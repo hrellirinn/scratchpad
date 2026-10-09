@@ -74,6 +74,7 @@ struct SheetSelector: View {
                 .contentShape(Capsule())   // whole segment is clickable, not just the text
         }
         .buttonStyle(.plain)
+        .help("\(titles[index])  ⌘\(index + 1)")   // the shortcut AppDelegate listens for
     }
 }
 
