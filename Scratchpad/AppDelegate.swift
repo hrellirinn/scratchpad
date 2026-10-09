@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Watches clicks in *our* window that land in the transparent shadow margin.
     private var marginClickMonitor: Any?
 
+    /// Watches key presses in the panel for the sheet-switching shortcuts.
+    private var sheetKeyMonitor: Any?
+
     /// Guards against the "close then instantly reopen" race when the icon
     /// itself is clicked while the panel is open (see `togglePanel`).
     private var lastHiddenAt: Date = .distantPast
@@ -131,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.highlight(true)   // keep the icon in its "pressed" look while open
 
         installClickMonitors()
+        installSheetKeyMonitor()
 
         // Give the window one pass through the run loop to settle on screen
         // before we place the text cursor.
@@ -144,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderOut(nil)
         statusItem.button?.highlight(false)
         removeClickMonitors()
+        removeSheetKeyMonitor()
         lastHiddenAt = Date()
 
         // Hand focus back to whatever app you were in — unless one of our own
@@ -219,4 +224,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             marginClickMonitor = nil
         }
     }
+
+    // MARK: - Sheet shortcuts
+
+    /// ⌘1…⌘5 jump to a sheet; ⌃Tab / ⌃⇧Tab step to the next / previous one,
+    /// wrapping round. A local monitor sees the key before the text view does,
+    /// so ⌃Tab switches sheets instead of typing a tab.
+    private func installSheetKeyMonitor() {
+        removeSheetKeyMonitor()
+        sheetKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.window === self.panel,
+                  let index = self.sheetIndex(for: event) else { return event }
+            self.store.selectedIndex = index
+            return nil                // handled: don't type it
+        }
+    }
+
+    private func removeSheetKeyMonitor() {
+        if let monitor = sheetKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            sheetKeyMonitor = nil
+        }
+    }
+
+    /// The sheet a key press asks for, or `nil` if it isn't a sheet shortcut.
+    private func sheetIndex(for event: NSEvent) -> Int? {
+        let count = settings.sheetCount
+        guard count > 1 else { return nil }
+        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
+
+        if event.keyCode == Self.tabKeyCode, modifiers.subtracting(.shift) == .control {
+            let step = modifiers.contains(.shift) ? -1 : 1
+            return (store.selectedIndex + step + count) % count
+        }
+        if modifiers == .command,
+           let digit = event.charactersIgnoringModifiers.flatMap({ Int($0) }),
+           (1...count).contains(digit) {
+            return digit - 1
+        }
+        return nil
+    }
+
+    /// The Tab key's virtual key code (`kVK_Tab` in Carbon).
+    private static let tabKeyCode: UInt16 = 48
 }
