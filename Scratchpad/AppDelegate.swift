@@ -18,14 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Watches clicks in *our* window that land in the transparent shadow margin.
     private var marginClickMonitor: Any?
 
+    /// Guards against the "close then instantly reopen" race when the icon
+    /// itself is clicked while the panel is open (see `togglePanel`).
+    private var lastHiddenAt: Date = .distantPast
+
     /// The Settings ▸ General shortcut that opens the panel from any app.
     private var panelHotKey: GlobalHotKey?
     /// True while Settings is recording a new shortcut (see `ShortcutRecorder`).
     private var panelShortcutPaused = false
-
-    /// Guards against the "close then instantly reopen" race when the icon
-    /// itself is clicked while the panel is open (see `togglePanel`).
-    private var lastHiddenAt: Date = .distantPast
 
     /// Design values. 440×580 from the Figma frame; gap is the breathing room
     /// between the menubar and the panel, matching macOS 26 system panels.
@@ -37,7 +37,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureStatusItem()
         configurePanel()
         observeAppearanceSetting()
-        observePanelShortcut()
     }
 
     /// Apply Settings ▸ Appearance to the panel, and re-apply whenever it changes.
@@ -121,6 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(appDidResignActive),
             name: NSApplication.didResignActiveNotification, object: nil
         )
+
+        observePanelShortcut()
     }
 
     @objc private func togglePanel(_ sender: Any?) {
